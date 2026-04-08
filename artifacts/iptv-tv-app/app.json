@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "ANGEL TV pro",
+    "slug": "iptv-tv-app",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "icon": "./assets/images/icon.png",
+    "scheme": "iptv-tv-app",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#111108"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.iptv.pro.tv"
+    },
+    "android": {
+      "package": "com.iptv.pro.tv",
+      "isTV": true,
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#111108"
+      },
+      "icon": "./assets/images/icon.png",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-av",
+      "expo-updates",
+      "./plugins/withTvBanner",
+      "./plugins/withArm64Only"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6bb9e107-e571-4476-9074-d63d24b12203"
+      }
+    },
+    "owner": "hgga",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6bb9e107-e571-4476-9074-d63d24b12203",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
+  }
+}
