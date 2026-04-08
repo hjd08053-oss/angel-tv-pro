@@ -32,4 +32,35 @@ router.get("/apk", (_req, res) => {
   res.sendFile(apkPath);
 });
 
+router.get("/eas-build-status", async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  const buildId = (req.query.buildId as string) || "2e9d7319-6797-40cb-a4a8-eeb19b36faa9";
+  try {
+    const stateFile = `${process.env.HOME}/.expo/state.json`;
+    let token = "";
+    if (fs.existsSync(stateFile)) {
+      const state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+      token = state?.auth?.sessionSecret || "";
+    }
+    const resp = await fetch(
+      `https://api.expo.dev/v2/builds/${buildId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "expo-client-info": JSON.stringify({ clientType: "eas-cli" }),
+        },
+      }
+    );
+    if (!resp.ok) {
+      return res.json({ status: "UNKNOWN", apkUrl: null });
+    }
+    const j = (await resp.json()) as any;
+    const status = j?.data?.status || "UNKNOWN";
+    const apkUrl = j?.data?.artifacts?.buildUrl || null;
+    return res.json({ status, apkUrl, buildId });
+  } catch {
+    return res.json({ status: "UNKNOWN", apkUrl: null });
+  }
+});
+
 export default router;
