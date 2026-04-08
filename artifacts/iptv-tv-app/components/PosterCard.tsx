@@ -6,37 +6,47 @@ import type { StreamItem } from "@/hooks/useApi";
 interface Props {
   item: StreamItem;
   onSelect: () => void;
+  onFocus?: () => void;
   hasTVPreferredFocus?: boolean;
   variant?: "poster" | "wide" | "channel";
 }
 
-export function PosterCard({ item, onSelect, hasTVPreferredFocus, variant = "poster" }: Props) {
+export function PosterCard({
+  item,
+  onSelect,
+  onFocus,
+  hasTVPreferredFocus,
+  variant = "poster",
+}: Props) {
   const [imgError, setImgError] = useState(false);
 
   const imageUri = item.stream_icon || item.cover;
-  const isPoster  = variant === "poster";
+  const isPoster = variant === "poster";
   const isChannel = variant === "channel";
-  const isWide    = variant === "wide";
 
-  // Compact sizes tuned for 1080p TV
   const W = isPoster ? 108 : isChannel ? 132 : 168;
-  const H = isPoster ? 156 : isChannel ? 74  : 94;
+  const H = isPoster ? 156 : isChannel ? 74 : 94;
 
   return (
     <Pressable
       onPress={onSelect}
-      focusable={true}
+      onFocus={onFocus}
+      focusable
       hasTVPreferredFocus={hasTVPreferredFocus}
       style={({ focused }) => [
         styles.wrap,
         { width: W },
-        (focused as boolean) && styles.wrapFocused,
+        focused && styles.wrapFocused,
       ]}
     >
-      {({ focused }: { focused: boolean }) => (
-        <View style={[styles.thumb, { width: W, height: H }, (focused as boolean) && styles.thumbFocused]}>
-
-          {/* Image */}
+      {({ focused }) => (
+        <View
+          style={[
+            styles.thumb,
+            { width: W, height: H },
+            focused && styles.thumbFocused,
+          ]}
+        >
           {imageUri && !imgError ? (
             <Image
               source={{ uri: imageUri }}
@@ -52,21 +62,20 @@ export function PosterCard({ item, onSelect, hasTVPreferredFocus, variant = "pos
             </View>
           )}
 
-          {/* Rating badge */}
           {item.rating && Number(item.rating) > 0 ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>★{Number(item.rating).toFixed(1)}</Text>
+              <Text style={styles.badgeText}>
+                ★{Number(item.rating).toFixed(1)}
+              </Text>
             </View>
           ) : null}
 
-          {/* Title overlay — always visible at bottom */}
           <View style={styles.titleOverlay}>
             <Text style={styles.titleText} numberOfLines={isChannel ? 1 : 2}>
               {item.name}
             </Text>
           </View>
 
-          {/* Focus: white border glow + play button */}
           {focused && (
             <>
               <View style={styles.focusSheen} />
@@ -110,7 +119,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#17181f",
   },
   placeholderIcon: { fontSize: 22, color: "#555" },
-
   badge: {
     position: "absolute",
     top: 3,
@@ -121,8 +129,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   badgeText: { color: colors.gold, fontSize: 9, fontWeight: "700" },
-
-  // Title overlay at the bottom of the card
   titleOverlay: {
     position: "absolute",
     bottom: 0,
@@ -139,8 +145,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
     lineHeight: 12,
   },
-
-  // Focus overlay
   focusSheen: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.08)",
