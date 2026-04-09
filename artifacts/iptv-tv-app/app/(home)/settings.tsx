@@ -17,15 +17,18 @@ export default function SettingsScreen() {
         <Pressable
           onPress={() => router.back()}
           hasTVPreferredFocus
-          style={({ focused }) => [styles.backBtn, { borderColor: (focused as boolean) ? colors.accent : "transparent" }]}
+          style={({ focused }) => [
+            styles.backBtn,
+            { borderColor: focused ? "#ffffff" : "transparent" },
+            focused && styles.backBtnFocused,
+          ]}
         >
           <Text style={styles.backBtnText}>← رجوع</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>الإعدادات</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>الإعدادات</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 32, gap: 32 }}>
-        {/* Theme */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.accent }]}>🎨 ثيم الألوان</Text>
           <Text style={[styles.sectionDesc, { color: colors.subtext }]}>اختر لون واجهة التطبيق</Text>
@@ -39,28 +42,53 @@ export default function SettingsScreen() {
                   onPress={() => setTheme(key)}
                   style={({ focused }) => [
                     styles.themeCard,
-                    { backgroundColor: t.card, borderColor: active ? t.accent : (focused as boolean) ? t.accent : colors.border },
+                    { backgroundColor: t.card, borderColor: active ? t.accent : focused ? "#ffffff" : colors.border },
                     active && { shadowColor: t.accentGlow, shadowOpacity: 1, shadowRadius: 16 },
+                    focused && styles.themeCardFocused,
                   ]}
                 >
-                  <View style={[styles.themeCircle, { backgroundColor: t.accent }]} />
-                  <Text style={[styles.themeLabel, { color: active ? t.accent : "#ccc" }]}>{THEME_LABELS[key]}</Text>
-                  {active && <Text style={[styles.themeActive, { color: t.accent }]}>✓ مفعّل</Text>}
+                  {({ focused }) => (
+                    <>
+                      <View style={[
+                        styles.themeCircle,
+                        { backgroundColor: t.accent },
+                        focused && { width: 46, height: 46, borderRadius: 23, shadowColor: t.accent, shadowOpacity: 0.8, shadowRadius: 12 },
+                      ]} />
+                      <Text style={[styles.themeLabel, { color: active || focused ? t.accent : "#ccc" }]}>
+                        {THEME_LABELS[key]}
+                      </Text>
+                      {active && <Text style={[styles.themeActive, { color: t.accent }]}>✓ مفعّل</Text>}
+                      {focused && !active && <Text style={[styles.themeActive, { color: t.accent }]}>← اضغط</Text>}
+                    </>
+                  )}
                 </Pressable>
               );
             })}
           </View>
         </View>
 
-        {/* Preview */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.accent }]}>👁 معاينة الثيم</Text>
           <View style={[styles.previewBox, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-            <Text style={[styles.previewTitle, { color: "#fff" }]}>ANGEL <Text style={{ color: colors.accent }}>TV pro</Text></Text>
+            <Text style={[styles.previewTitle, { color: "#fff" }]}>
+              ANGEL <Text style={{ color: colors.accent }}>TV pro</Text>
+            </Text>
             <View style={[styles.previewBtn, { backgroundColor: colors.accent }]}>
               <Text style={styles.previewBtnText}>▶ شغّل الآن</Text>
             </View>
             <Text style={[styles.previewSub, { color: colors.subtext }]}>هذا مثال على مظهر التطبيق</Text>
+          </View>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>ℹ️ معلومات</Text>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: colors.subtext }]}>الإصدار</Text>
+            <Text style={[styles.infoValue, { color: "#fff" }]}>1.0.0</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: colors.subtext }]}>المنصة</Text>
+            <Text style={[styles.infoValue, { color: "#fff" }]}>Android TV</Text>
           </View>
         </View>
       </ScrollView>
@@ -75,29 +103,46 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, gap: 16,
   },
   backBtn: {
-    backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 16,
-    paddingVertical: 9, borderRadius: 8, borderWidth: 2,
+    backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 20,
+    paddingVertical: 11, borderRadius: 8, borderWidth: 3,
   },
-  backBtnText: { color: "#fff", fontSize: 15 },
-  headerTitle: { flex: 1, color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "right" },
+  backBtnFocused: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    transform: [{ scale: 1.06 }],
+  },
+  backBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  headerTitle: { flex: 1, fontSize: 22, fontWeight: "800", textAlign: "right" },
   section: {
     borderRadius: 14, padding: 24,
     borderWidth: 1, gap: 12,
   },
   sectionTitle: { fontSize: 18, fontWeight: "800" },
   sectionDesc: { fontSize: 14 },
-  themeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
+  themeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 8 },
   themeCard: {
-    flex: 1, minWidth: 140, borderRadius: 12,
-    padding: 18, borderWidth: 2,
-    alignItems: "center", gap: 8,
+    flex: 1, minWidth: 150, borderRadius: 14,
+    padding: 20, borderWidth: 3,
+    alignItems: "center", gap: 10,
   },
-  themeCircle: { width: 36, height: 36, borderRadius: 18 },
-  themeLabel: { fontSize: 15, fontWeight: "700" },
+  themeCardFocused: {
+    shadowColor: "#ffffff",
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 16,
+    transform: [{ scale: 1.06 }],
+  },
+  themeCircle: { width: 40, height: 40, borderRadius: 20 },
+  themeLabel: { fontSize: 16, fontWeight: "700" },
   themeActive: { fontSize: 12, fontWeight: "700" },
-  previewBox: { borderRadius: 10, padding: 20, borderWidth: 1, alignItems: "center", gap: 12 },
+  previewBox: { borderRadius: 10, padding: 24, borderWidth: 1, alignItems: "center", gap: 14 },
   previewTitle: { fontSize: 24, fontWeight: "900" },
   previewBtn: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 8 },
   previewBtnText: { color: "#111", fontSize: 16, fontWeight: "800" },
   previewSub: { fontSize: 13 },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 4 },
+  infoLabel: { fontSize: 14 },
+  infoValue: { fontSize: 14, fontWeight: "700" },
 });
