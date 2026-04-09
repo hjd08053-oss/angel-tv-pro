@@ -57,8 +57,7 @@ export default function MovieDetailScreen() {
 
       <Pressable
         onPress={() => router.back()}
-        hasTVPreferredFocus
-        style={({ focused }) => [styles.backBtn, (focused as boolean) && styles.backBtnFocused]}
+        style={({ focused }) => [styles.backBtn, focused && styles.backBtnFocused]}
       >
         <Text style={styles.backBtnText}>← رجوع</Text>
       </Pressable>
@@ -94,26 +93,40 @@ export default function MovieDetailScreen() {
 
           <View style={styles.actionRow}>
             <Pressable
+              ref={playRef}
               onPress={play}
-              style={({ focused }) => [styles.playBtn, (focused as boolean) && styles.playBtnFocused]}
+              hasTVPreferredFocus
+              style={({ focused }) => [styles.playBtn, focused && styles.playBtnFocused]}
             >
-              <Text style={styles.playBtnIcon}>▶</Text>
-              <Text style={styles.playBtnText}>شغّل الآن</Text>
+              {({ focused }) => (
+                <>
+                  <Text style={[styles.playBtnIcon, focused && styles.playBtnIconFocused]}>▶</Text>
+                  <Text style={[styles.playBtnText, focused && styles.playBtnTextFocused]}>شغّل الآن</Text>
+                </>
+              )}
             </Pressable>
 
             <Pressable
               onPress={toggleWatchlist}
-              style={({ focused }) => [styles.wlBtn, inWatchlist && styles.wlBtnActive, (focused as boolean) && styles.wlBtnFocused]}
+              style={({ focused }) => [
+                styles.wlBtn,
+                inWatchlist && styles.wlBtnActive,
+                focused && styles.wlBtnFocused,
+              ]}
             >
-              {watchlistLoading ? (
-                <ActivityIndicator size="small" color={inWatchlist ? "#111" : colors.accent} />
-              ) : (
-                <>
-                  <Text style={[styles.wlBtnIcon, inWatchlist && styles.wlBtnIconActive]}>{inWatchlist ? "✓" : "+"}</Text>
-                  <Text style={[styles.wlBtnText, inWatchlist && styles.wlBtnTextActive]}>
-                    {inWatchlist ? "في القائمة" : "أضف للقائمة"}
-                  </Text>
-                </>
+              {({ focused }) => (
+                watchlistLoading ? (
+                  <ActivityIndicator size="small" color={inWatchlist ? "#111" : colors.accent} />
+                ) : (
+                  <>
+                    <Text style={[styles.wlBtnIcon, inWatchlist && styles.wlBtnIconActive]}>
+                      {inWatchlist ? "✓" : "+"}
+                    </Text>
+                    <Text style={[styles.wlBtnText, inWatchlist && styles.wlBtnTextActive]}>
+                      {inWatchlist ? "في القائمة" : "أضف للقائمة"}
+                    </Text>
+                  </>
+                )
               )}
             </Pressable>
           </View>
@@ -130,9 +143,16 @@ const styles = StyleSheet.create({
     position: "absolute", top: 60, left: 24, zIndex: 10,
     backgroundColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8,
-    borderWidth: 2, borderColor: "transparent",
+    borderWidth: 3, borderColor: "transparent",
   },
-  backBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.18)" },
+  backBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    transform: [{ scale: 1.05 }],
+  },
   backBtnText: { color: "#fff", fontSize: 16 },
   content: {
     flex: 1, flexDirection: "row", alignItems: "center",
@@ -155,23 +175,40 @@ const styles = StyleSheet.create({
   },
   smartScoreIcon: { fontSize: 16 },
   smartScoreText: { color: "#4ade80", fontSize: 14, fontWeight: "700" },
-  actionRow: { gap: 12, alignSelf: "stretch" },
+  actionRow: { gap: 14, alignSelf: "stretch" },
   playBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    backgroundColor: colors.accent, paddingHorizontal: 40, paddingVertical: 18,
-    borderRadius: 10, gap: 12, borderWidth: 2, borderColor: "transparent",
+    backgroundColor: colors.accent, paddingHorizontal: 40, paddingVertical: 20,
+    borderRadius: 12, gap: 12, borderWidth: 3, borderColor: "transparent",
   },
-  playBtnFocused: { backgroundColor: "#fff", borderColor: "#fff", shadowColor: "#fff", shadowOpacity: 0.8, shadowRadius: 18, elevation: 12 },
-  playBtnIcon: { color: "#111", fontSize: 22 },
+  playBtnFocused: {
+    borderColor: "#ffffff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.9,
+    shadowRadius: 22,
+    elevation: 18,
+    transform: [{ scale: 1.06 }],
+    backgroundColor: "#fff",
+  },
+  playBtnIcon: { color: "#111", fontSize: 24 },
+  playBtnIconFocused: { color: "#111" },
   playBtnText: { color: "#111", fontSize: 22, fontWeight: "900" },
+  playBtnTextFocused: { color: "#111" },
   wlBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(240,191,26,0.08)",
-    paddingHorizontal: 40, paddingVertical: 16, borderRadius: 10, gap: 10,
-    borderWidth: 2, borderColor: colors.border,
+    paddingHorizontal: 40, paddingVertical: 16, borderRadius: 12, gap: 10,
+    borderWidth: 3, borderColor: colors.border,
   },
   wlBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  wlBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.14)" },
+  wlBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    transform: [{ scale: 1.04 }],
+  },
   wlBtnIcon: { color: colors.accent, fontSize: 20, fontWeight: "700" },
   wlBtnIconActive: { color: "#111" },
   wlBtnText: { color: colors.accent, fontSize: 17, fontWeight: "700" },
