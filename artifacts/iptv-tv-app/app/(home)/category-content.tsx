@@ -15,7 +15,7 @@ type SortMode = "default" | "alpha" | "rating" | "newest";
 const SORT_OPTIONS: { key: SortMode; label: string }[] = [
   { key: "default",  label: "افتراضي" },
   { key: "alpha",    label: "أ-ي" },
-  { key: "rating",   label: "التقييم" },
+  { key: "rating",   label: "★ التقييم" },
   { key: "newest",   label: "الأحدث" },
 ];
 
@@ -28,16 +28,14 @@ export default function CategoryContentScreen() {
   const insets = useSafeAreaInsets();
   const [sort, setSort] = useState<SortMode>("default");
 
-  // ── Data state ─────────────────────────────────────────
   const [items, setItems]     = useState<StreamItem[]>([]);
   const [total, setTotal]     = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore]   = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset]   = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const fetchedRef = useRef(false);
 
-  // ── Build URL ──────────────────────────────────────────
   function buildUrl(off: number) {
     const base =
       tab === "live"   ? `${API_BASE}/api/live/streams` :
@@ -51,7 +49,6 @@ export default function CategoryContentScreen() {
     return `${base}?${params.toString()}`;
   }
 
-  // ── Initial fetch ──────────────────────────────────────
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
@@ -69,7 +66,6 @@ export default function CategoryContentScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catId, tab]);
 
-  // ── Load more (pagination) ─────────────────────────────
   const loadMore = useCallback(() => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
@@ -88,17 +84,15 @@ export default function CategoryContentScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset, hasMore, loadingMore, items.length]);
 
-  // ── Sort ───────────────────────────────────────────────
   const sorted = useMemo(() => {
     if (sort === "default") return items;
     const copy = [...items];
-    if (sort === "alpha")   return copy.sort((a, b) => a.name.localeCompare(b.name, "ar"));
-    if (sort === "rating")  return copy.sort((a, b) => parseFloat(String(b.rating || 0)) - parseFloat(String(a.rating || 0)));
-    if (sort === "newest")  return copy.sort((a, b) => Number(b.added || 0) - Number(a.added || 0));
+    if (sort === "alpha")  return copy.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+    if (sort === "rating") return copy.sort((a, b) => parseFloat(String(b.rating || 0)) - parseFloat(String(a.rating || 0)));
+    if (sort === "newest") return copy.sort((a, b) => Number(b.added || 0) - Number(a.added || 0));
     return copy;
   }, [items, sort]);
 
-  // ── Open item ──────────────────────────────────────────
   function openItem(item: StreamItem) {
     if (tab === "series") {
       router.push({ pathname: "/(home)/series-detail", params: { id: String(item.series_id ?? item.stream_id), title: item.name, cover: item.cover || item.stream_icon || "" } });
@@ -118,9 +112,11 @@ export default function CategoryContentScreen() {
         <Pressable
           onPress={() => router.back()}
           hasTVPreferredFocus
-          style={({ focused }) => [styles.backBtn, (focused as boolean) && styles.backBtnFocused]}
+          style={({ focused }) => [styles.backBtn, focused && styles.backBtnFocused]}
         >
-          <Text style={styles.backBtnText}>← رجوع</Text>
+          {({ focused }) => (
+            <Text style={[styles.backBtnText, focused && styles.backBtnTextFocused]}>← رجوع</Text>
+          )}
         </Pressable>
         <Text style={styles.catTitle}>{catName}</Text>
         <Text style={styles.catCount}>{total > 0 ? `${sorted.length} / ${total}` : ""}</Text>
@@ -137,12 +133,18 @@ export default function CategoryContentScreen() {
               style={({ focused }) => [
                 styles.filterBtn,
                 sort === opt.key && styles.filterBtnActive,
-                (focused as boolean) && styles.filterBtnFocused,
+                focused && styles.filterBtnFocused,
               ]}
             >
-              <Text style={[styles.filterBtnText, sort === opt.key && styles.filterBtnTextActive]}>
-                {opt.label}
-              </Text>
+              {({ focused }) => (
+                <Text style={[
+                  styles.filterBtnText,
+                  sort === opt.key && styles.filterBtnTextActive,
+                  focused && styles.filterBtnTextFocused,
+                ]}>
+                  {opt.label}
+                </Text>
+              )}
             </Pressable>
           ))}
         </View>
@@ -182,9 +184,13 @@ export default function CategoryContentScreen() {
             ) : hasMore ? (
               <Pressable
                 onPress={loadMore}
-                style={({ focused }) => [styles.loadMoreBtn, (focused as boolean) && styles.loadMoreBtnFocused]}
+                style={({ focused }) => [styles.loadMoreBtn, focused && styles.loadMoreBtnFocused]}
               >
-                <Text style={styles.loadMoreBtnText}>تحميل المزيد ({total - sorted.length} متبقي)</Text>
+                {({ focused }) => (
+                  <Text style={[styles.loadMoreBtnText, focused && { color: "#fff" }]}>
+                    تحميل المزيد ({total - sorted.length} متبقي)
+                  </Text>
+                )}
               </Pressable>
             ) : null
           }
@@ -211,27 +217,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border, gap: 16,
   },
   backBtn: {
-    backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 16,
-    paddingVertical: 9, borderRadius: 8, borderWidth: 3, borderColor: "transparent",
+    backgroundColor: "rgba(255,255,255,0.06)", paddingHorizontal: 18,
+    paddingVertical: 11, borderRadius: 8, borderWidth: 3, borderColor: "transparent",
   },
-  backBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.18)" },
+  backBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    transform: [{ scale: 1.06 }],
+  },
   backBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  backBtnTextFocused: { color: "#fff", fontWeight: "900" },
   catTitle: { flex: 1, color: "#fff", fontSize: 20, fontWeight: "800", textAlign: "right" },
   catCount: { color: colors.accent, fontSize: 14, fontWeight: "700", minWidth: 70, textAlign: "left" },
   filterBar: {
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 16, paddingVertical: 8, gap: 8,
+    paddingHorizontal: 16, paddingVertical: 10, gap: 8,
     backgroundColor: "#0e0e07", borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   filterLabel: { color: "#888", fontSize: 13, marginRight: 4 },
   filterBtn: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
     backgroundColor: "#1a1a0d", borderWidth: 3, borderColor: "transparent",
   },
   filterBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  filterBtnFocused: { borderColor: "#fff" },
+  filterBtnFocused: {
+    borderColor: "#fff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    transform: [{ scale: 1.08 }],
+  },
   filterBtnText: { color: "#888", fontSize: 13, fontWeight: "600" },
-  filterBtnTextActive: { color: "#111" },
+  filterBtnTextActive: { color: "#111", fontWeight: "900" },
+  filterBtnTextFocused: { color: "#fff" },
   grid: { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 32 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingTop: 80 },
   loadingText: { color: "#aaa", fontSize: 16 },
@@ -239,10 +260,17 @@ const styles = StyleSheet.create({
   loadMoreWrap: { alignItems: "center", paddingVertical: 20, gap: 8 },
   loadMoreText: { color: "#888", fontSize: 14 },
   loadMoreBtn: {
-    margin: 20, paddingVertical: 14, paddingHorizontal: 32,
-    borderRadius: 10, backgroundColor: "#1a1a0d",
+    margin: 20, paddingVertical: 16, paddingHorizontal: 40,
+    borderRadius: 12, backgroundColor: "#1a1a0d",
     borderWidth: 3, borderColor: "#555", alignItems: "center",
   },
-  loadMoreBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.18)" },
-  loadMoreBtnText: { color: "#ccc", fontSize: 14, fontWeight: "700" },
+  loadMoreBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    transform: [{ scale: 1.04 }],
+  },
+  loadMoreBtnText: { color: "#ccc", fontSize: 15, fontWeight: "700" },
 });
