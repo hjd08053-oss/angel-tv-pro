@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, FlatList } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
@@ -9,6 +9,7 @@ import { saveResumePosition, getResumePosition, incrementWatchCount } from "@/ho
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const INTRO_DURATION_MS = 120000;
+const SEEK_SEC = 30;
 
 function fmtTime(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -42,8 +43,10 @@ export default function PlayerScreen() {
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
+  const [seekFeedback, setSeekFeedback] = useState<string | null>(null);
 
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seekFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const key = resumeKey || url || "";
 
   useEffect(() => {
@@ -62,6 +65,7 @@ export default function PlayerScreen() {
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       if (saveTimer.current) clearInterval(saveTimer.current);
+      if (seekFeedbackTimer.current) clearTimeout(seekFeedbackTimer.current);
     };
   }, []);
 
@@ -75,6 +79,14 @@ export default function PlayerScreen() {
     }, 5000);
     return () => { if (saveTimer.current) clearInterval(saveTimer.current); };
   }, [status, positionMs, durationMs, key]);
+
+
+  function showSeekFeedback(msg: string) {
+    setSeekFeedback(msg);
+    if (seekFeedbackTimer.current) clearTimeout(seekFeedbackTimer.current);
+    seekFeedbackTimer.current = setTimeout(() => setSeekFeedback(null), 1200);
+    resetHideTimer();
+  }
 
   async function handleResume(yes: boolean) {
     setShowResumePrompt(false);
@@ -90,7 +102,7 @@ export default function PlayerScreen() {
   const resetHideTimer = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setShowControls(true);
-    hideTimer.current = setTimeout(() => setShowControls(false), 5000);
+    hideTimer.current = setTimeout(() => setShowControls(false), 6000);
   }, []);
 
   const handleStatus = useCallback((s: AVPlaybackStatus) => {
@@ -195,25 +207,36 @@ export default function PlayerScreen() {
         ) : null}
       </Pressable>
 
+      {/* Seek feedback toast */}
+      {seekFeedback && (
+        <View style={styles.seekFeedback} pointerEvents="none">
+          <Text style={styles.seekFeedbackText}>{seekFeedback}</Text>
+        </View>
+      )}
+
       {/* Resume prompt */}
       {showResumePrompt && (
         <View style={styles.overlay}>
           <View style={styles.resumeCard}>
-            <Text style={styles.resumeTitle}>استكمال المشاهدة</Text>
+            <Text style={styles.resumeTitle}>استكمال المشاهدة؟</Text>
             <Text style={styles.resumeSub}>آخر موضع: {fmtTime(resumeMs || 0)}</Text>
             <View style={styles.resumeBtns}>
               <Pressable
                 onPress={() => handleResume(true)}
                 hasTVPreferredFocus
-                style={({ focused }) => [styles.resumeBtn, styles.resumeBtnPrimary, (focused as boolean) && styles.resumeBtnFocused]}
+                style={({ focused }) => [styles.resumeBtn, styles.resumeBtnPrimary, focused && styles.resumeBtnFocused]}
               >
-                <Text style={styles.resumeBtnTextPrimary}>استكمال ▶</Text>
+                {({ focused }) => (
+                  <Text style={[styles.resumeBtnTextPrimary, focused && { fontSize: 18 }]}>استكمال ▶</Text>
+                )}
               </Pressable>
               <Pressable
                 onPress={() => handleResume(false)}
-                style={({ focused }) => [styles.resumeBtn, (focused as boolean) && styles.resumeBtnFocused]}
+                style={({ focused }) => [styles.resumeBtn, focused && styles.resumeBtnFocused]}
               >
-                <Text style={styles.resumeBtnText}>من البداية</Text>
+                {({ focused }) => (
+                  <Text style={[styles.resumeBtnText, focused && { color: "#fff" }]}>من البداية ↺</Text>
+                )}
               </Pressable>
             </View>
           </View>
@@ -233,7 +256,11 @@ export default function PlayerScreen() {
         <View style={styles.overlay}>
           <Text style={styles.errorIcon}>⚠</Text>
           <Text style={styles.errorText}>تعذر تشغيل البث</Text>
-          <Pressable onPress={() => router.back()} style={styles.errorBtn} hasTVPreferredFocus>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ focused }) => [styles.errorBtn, focused && styles.errorBtnFocused]}
+            hasTVPreferredFocus
+          >
             <Text style={styles.errorBtnText}>← رجوع</Text>
           </Pressable>
         </View>
@@ -243,15 +270,22 @@ export default function PlayerScreen() {
       {showSpeedMenu && (
         <View style={styles.speedMenu}>
           <Text style={styles.speedMenuTitle}>سرعة التشغيل</Text>
-          {SPEEDS.map(s => (
+          {SPEEDS.map((s, i) => (
             <Pressable
               key={s}
               onPress={() => setPlaybackSpeed(s)}
-              style={({ focused }) => [styles.speedItem, s === speed && styles.speedItemActive, (focused as boolean) && styles.speedItemFocused]}
+              hasTVPreferredFocus={i === 2}
+              style={({ focused }) => [
+                styles.speedItem,
+                s === speed && styles.speedItemActive,
+                focused && styles.speedItemFocused,
+              ]}
             >
-              <Text style={[styles.speedItemText, s === speed && styles.speedItemTextActive]}>
-                {s === 1 ? "عادي" : `${s}x`}
-              </Text>
+              {({ focused }) => (
+                <Text style={[styles.speedItemText, s === speed && styles.speedItemTextActive, focused && { color: "#fff" }]}>
+                  {s === 1 ? "عادي ✓" : `${s}x`}
+                </Text>
+              )}
             </Pressable>
           ))}
         </View>
@@ -265,7 +299,7 @@ export default function PlayerScreen() {
             await videoRef.current?.setPositionAsync(INTRO_DURATION_MS);
             setPositionMs(INTRO_DURATION_MS);
           }}
-          style={({ focused }) => [styles.skipIntroBtn, (focused as boolean) && styles.skipIntroBtnFocused]}
+          style={({ focused }) => [styles.skipIntroBtn, focused && styles.skipIntroBtnFocused]}
         >
           <Text style={styles.skipIntroText}>تخطي المقدمة ⏭</Text>
         </Pressable>
@@ -278,67 +312,87 @@ export default function PlayerScreen() {
             <Pressable
               onPress={() => router.back()}
               hasTVPreferredFocus
-              style={({ focused }) => [styles.topBtn, (focused as boolean) && styles.topBtnFocused]}
+              style={({ focused }) => [styles.topBtn, focused && styles.topBtnFocused]}
             >
-              <Text style={styles.topBtnText}>← رجوع</Text>
+              {({ focused }) => (
+                <Text style={[styles.topBtnText, focused && styles.topBtnTextFocused]}>← رجوع</Text>
+              )}
             </Pressable>
             <Text style={styles.titleText} numberOfLines={1}>{title}</Text>
             <Pressable
               onPress={() => { setShowSpeedMenu(v => !v); resetHideTimer(); }}
-              style={({ focused }) => [styles.topBtn, (focused as boolean) && styles.topBtnFocused]}
+              style={({ focused }) => [styles.topBtn, focused && styles.topBtnFocused]}
             >
-              <Text style={styles.topBtnText}>{speed === 1 ? "السرعة" : `${speed}x`}</Text>
-            </Pressable>
-            <Pressable
-              onPress={toggleFullscreen}
-              style={({ focused }) => [styles.topBtn, (focused as boolean) && styles.topBtnFocused]}
-            >
-              <Text style={styles.topBtnText}>{isFullscreen ? "⊡" : "⛶"}</Text>
+              {({ focused }) => (
+                <Text style={[styles.topBtnText, focused && styles.topBtnTextFocused]}>
+                  {speed === 1 ? "⚙ السرعة" : `⚙ ${speed}x`}
+                </Text>
+              )}
             </Pressable>
           </View>
 
           <View style={styles.bottomSection}>
-            <View style={styles.progressRow}>
-              <Text style={styles.timeText}>{fmtTime(positionMs)}</Text>
-              <Pressable
-                style={styles.progressTrack}
-                onPress={(e) => {
-                  const { locationX } = e.nativeEvent as any;
-                  (e.target as any)?.measure?.((x: number, y: number, width: number) => {
-                    if (width > 0) seekToPercent(locationX / width);
-                  });
-                }}
-              >
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${Math.min(progress * 100, 100)}%` }]} />
-                  <View style={[styles.progressThumb, { left: `${Math.min(progress * 100, 100)}%` }]} />
-                </View>
-              </Pressable>
-              <Text style={styles.timeText}>{durationMs > 0 ? fmtTime(durationMs) : "--:--"}</Text>
-            </View>
+            {durationMs > 0 && (
+              <View style={styles.progressRow}>
+                <Text style={styles.timeText}>{fmtTime(positionMs)}</Text>
+                <Pressable
+                  style={styles.progressTrack}
+                  onPress={(e) => {
+                    const { locationX } = e.nativeEvent as any;
+                    (e.target as any)?.measure?.((x: number, y: number, width: number) => {
+                      if (width > 0) seekToPercent(locationX / width);
+                    });
+                  }}
+                >
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${Math.min(progress * 100, 100)}%` }]} />
+                    <View style={[styles.progressThumb, { left: `${Math.min(progress * 100, 100)}%` }]} />
+                  </View>
+                </Pressable>
+                <Text style={styles.timeText}>{fmtTime(durationMs)}</Text>
+              </View>
+            )}
 
             <View style={styles.btnRow}>
               <Pressable
-                onPress={() => seek(-30)}
-                style={({ focused }) => [styles.controlBtn, (focused as boolean) && styles.controlBtnFocused]}
+                onPress={() => { seek(-SEEK_SEC); showSeekFeedback(`⏪ -${SEEK_SEC}ث`); }}
+                style={({ focused }) => [styles.controlBtn, focused && styles.controlBtnFocused]}
               >
-                <Text style={styles.controlBtnText}>⏪ 30ث</Text>
+                {({ focused }) => (
+                  <Text style={[styles.controlBtnText, focused && styles.controlBtnTextFocused]}>
+                    ⏪ {SEEK_SEC}ث
+                  </Text>
+                )}
               </Pressable>
 
               <Pressable
                 onPress={togglePlay}
-                style={({ focused }) => [styles.playBtn, (focused as boolean) && styles.playBtnFocused]}
+                style={({ focused }) => [styles.playBtn, focused && styles.playBtnFocused]}
               >
-                <Text style={styles.playBtnText}>{status === "playing" ? "⏸" : "▶"}</Text>
+                {({ focused }) => (
+                  <Text style={[styles.playBtnText, focused && { fontSize: 34 }]}>
+                    {status === "playing" ? "⏸" : "▶"}
+                  </Text>
+                )}
               </Pressable>
 
               <Pressable
-                onPress={() => seek(30)}
-                style={({ focused }) => [styles.controlBtn, (focused as boolean) && styles.controlBtnFocused]}
+                onPress={() => { seek(SEEK_SEC); showSeekFeedback(`⏩ +${SEEK_SEC}ث`); }}
+                style={({ focused }) => [styles.controlBtn, focused && styles.controlBtnFocused]}
               >
-                <Text style={styles.controlBtnText}>30ث ⏩</Text>
+                {({ focused }) => (
+                  <Text style={[styles.controlBtnText, focused && styles.controlBtnTextFocused]}>
+                    {SEEK_SEC}ث ⏩
+                  </Text>
+                )}
               </Pressable>
             </View>
+
+            {Platform.isTV && (
+              <Text style={styles.tvHint}>
+                ◀▶ للتخطي {SEEK_SEC}ث  •  OK للتشغيل/إيقاف
+              </Text>
+            )}
           </View>
         </>
       )}
@@ -358,110 +412,157 @@ const styles = StyleSheet.create({
   loadingText: { color: "#fff", fontSize: 18 },
   errorIcon: { fontSize: 52, color: "#ef4444" },
   errorText: { color: "#fff", fontSize: 22, fontWeight: "bold" },
-  errorBtn: { backgroundColor: colors.accent, paddingHorizontal: 36, paddingVertical: 14, borderRadius: 10, marginTop: 12 },
-  errorBtnText: { color: "#111", fontSize: 18, fontWeight: "bold" },
+  errorBtn: {
+    backgroundColor: colors.accent, paddingHorizontal: 40, paddingVertical: 16,
+    borderRadius: 12, marginTop: 12, borderWidth: 3, borderColor: "transparent",
+  },
+  errorBtnFocused: {
+    borderColor: "#fff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
+    transform: [{ scale: 1.06 }],
+  },
+  errorBtnText: { color: "#111", fontSize: 20, fontWeight: "900" },
 
-  resumeCard: {
-    backgroundColor: "#1a1a0d",
+  seekFeedback: {
+    position: "absolute",
+    top: "40%",
+    alignSelf: "center",
+    backgroundColor: "rgba(0,0,0,0.85)",
     borderRadius: 16,
-    padding: 36,
-    alignItems: "center",
-    gap: 16,
+    paddingHorizontal: 32,
+    paddingVertical: 18,
     borderWidth: 2,
     borderColor: colors.accent,
-    minWidth: 340,
   },
-  resumeTitle: { color: "#fff", fontSize: 22, fontWeight: "800" },
-  resumeSub: { color: colors.accent, fontSize: 16 },
-  resumeBtns: { flexDirection: "row", gap: 16, marginTop: 8 },
+  seekFeedbackText: { color: "#fff", fontSize: 28, fontWeight: "900", textAlign: "center" },
+
+  resumeCard: {
+    backgroundColor: "#1a1a0d", borderRadius: 20, padding: 40,
+    alignItems: "center", gap: 18, borderWidth: 2, borderColor: colors.accent, minWidth: 360,
+  },
+  resumeTitle: { color: "#fff", fontSize: 24, fontWeight: "800" },
+  resumeSub: { color: colors.accent, fontSize: 17 },
+  resumeBtns: { flexDirection: "row", gap: 18, marginTop: 8 },
   resumeBtn: {
-    paddingHorizontal: 28, paddingVertical: 12, borderRadius: 10,
-    borderWidth: 2, borderColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12,
+    borderWidth: 3, borderColor: "rgba(255,255,255,0.15)",
   },
   resumeBtnPrimary: { backgroundColor: colors.accent, borderColor: colors.accent },
-  resumeBtnFocused: { borderColor: "#fff", shadowColor: colors.accentGlow, shadowOpacity: 1, shadowRadius: 10 },
-  resumeBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  resumeBtnTextPrimary: { color: "#111", fontSize: 16, fontWeight: "900" },
+  resumeBtnFocused: {
+    borderColor: "#fff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.7,
+    shadowRadius: 14,
+    transform: [{ scale: 1.07 }],
+  },
+  resumeBtnText: { color: "#ccc", fontSize: 17, fontWeight: "700" },
+  resumeBtnTextPrimary: { color: "#111", fontSize: 17, fontWeight: "900" },
 
   speedMenu: {
-    position: "absolute",
-    top: 80,
-    right: 20,
-    backgroundColor: "#1a1a0d",
-    borderRadius: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    zIndex: 100,
-    minWidth: 140,
+    position: "absolute", top: 80, right: 20,
+    backgroundColor: "#1a1a0d", borderRadius: 14, paddingVertical: 8,
+    borderWidth: 2, borderColor: colors.border, zIndex: 100, minWidth: 160,
   },
-  speedMenuTitle: { color: "#888", fontSize: 12, textAlign: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#2a2a18" },
-  speedItem: { paddingVertical: 12, paddingHorizontal: 24, borderWidth: 2, borderColor: "transparent" },
-  speedItemActive: { backgroundColor: "rgba(240,191,26,0.1)" },
-  speedItemFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.12)" },
-  speedItemText: { color: "#ccc", fontSize: 15, textAlign: "center" },
-  speedItemTextActive: { color: colors.accent, fontWeight: "700" },
+  speedMenuTitle: { color: "#888", fontSize: 13, textAlign: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#2a2a18" },
+  speedItem: { paddingVertical: 14, paddingHorizontal: 28, borderWidth: 3, borderColor: "transparent" },
+  speedItemActive: { backgroundColor: "rgba(240,191,26,0.12)" },
+  speedItemFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    transform: [{ scale: 1.03 }],
+  },
+  speedItemText: { color: "#ccc", fontSize: 16, textAlign: "center" },
+  speedItemTextActive: { color: colors.accent, fontWeight: "900" },
 
   topBar: {
     position: "absolute", top: 0, left: 0, right: 0,
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 24, paddingBottom: 18,
-    backgroundColor: "rgba(0,0,0,0.75)", gap: 12,
+    paddingHorizontal: 28, paddingBottom: 20,
+    backgroundColor: "rgba(0,0,0,0.8)", gap: 14,
   },
   topBtn: {
-    backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 16,
-    paddingVertical: 7, borderRadius: 8, borderWidth: 2, borderColor: "transparent",
-    minWidth: 70, alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 18,
+    paddingVertical: 9, borderRadius: 10, borderWidth: 3, borderColor: "transparent",
+    minWidth: 80, alignItems: "center",
   },
-  topBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.2)" },
-  topBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  topBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.22)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    transform: [{ scale: 1.06 }],
+  },
+  topBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  topBtnTextFocused: { color: "#fff", fontWeight: "900" },
   titleText: { flex: 1, color: "#fff", fontSize: 20, fontWeight: "bold", textAlign: "center" },
 
   bottomSection: {
     position: "absolute", bottom: 0, left: 0, right: 0,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    paddingHorizontal: 32, paddingTop: 14, paddingBottom: 28, gap: 16,
-  },
-  progressRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  timeText: { color: "#ccc", fontSize: 14, minWidth: 52, textAlign: "center" },
-  progressTrack: { flex: 1, height: 28, justifyContent: "center" },
-  progressBar: { height: 4, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 2, position: "relative", overflow: "visible" },
-  progressFill: { height: 4, backgroundColor: colors.accent, borderRadius: 2 },
-  progressThumb: { position: "absolute", top: -5, marginLeft: -7, width: 14, height: 14, borderRadius: 7, backgroundColor: colors.accent, shadowColor: colors.accentGlow, shadowOpacity: 1, shadowRadius: 6 },
-
-  btnRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 28 },
-  controlBtn: {
-    backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 28,
-    paddingVertical: 12, borderRadius: 10, borderWidth: 2, borderColor: "transparent",
-  },
-  controlBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.18)" },
-  controlBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
-  playBtn: {
-    backgroundColor: colors.accent, width: 68, height: 68,
-    borderRadius: 34, alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: "transparent",
-  },
-  playBtnFocused: { backgroundColor: "#fff", borderColor: "#fff", shadowColor: "#fff", shadowOpacity: 0.8, shadowRadius: 14 },
-  playBtnText: { color: "#111", fontSize: 28 },
-
-  skipIntroBtn: {
-    position: "absolute",
-    bottom: 140,
-    right: 40,
     backgroundColor: "rgba(0,0,0,0.85)",
-    borderWidth: 2,
-    borderColor: "#555",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    zIndex: 50,
+    paddingHorizontal: 36, paddingTop: 16, paddingBottom: 32, gap: 18,
   },
-  skipIntroBtnFocused: {
+  progressRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  timeText: { color: "#ccc", fontSize: 14, minWidth: 58, textAlign: "center" },
+  progressTrack: { flex: 1, height: 32, justifyContent: "center" },
+  progressBar: { height: 5, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 3, position: "relative", overflow: "visible" },
+  progressFill: { height: 5, backgroundColor: colors.accent, borderRadius: 3 },
+  progressThumb: { position: "absolute", top: -6, marginLeft: -8, width: 17, height: 17, borderRadius: 9, backgroundColor: colors.accent, shadowColor: colors.accentGlow, shadowOpacity: 1, shadowRadius: 8 },
+
+  btnRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 32 },
+  controlBtn: {
+    backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 32,
+    paddingVertical: 14, borderRadius: 12, borderWidth: 3, borderColor: "transparent",
+  },
+  controlBtnFocused: {
     borderColor: "#ffffff",
     backgroundColor: "rgba(255,255,255,0.2)",
     shadowColor: "#fff",
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    transform: [{ scale: 1.08 }],
   },
-  skipIntroText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  controlBtnText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  controlBtnTextFocused: { fontWeight: "900" },
+  playBtn: {
+    backgroundColor: colors.accent, width: 76, height: 76,
+    borderRadius: 38, alignItems: "center", justifyContent: "center",
+    borderWidth: 3, borderColor: "transparent",
+  },
+  playBtnFocused: {
+    backgroundColor: "#fff",
+    borderColor: "#fff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.9,
+    shadowRadius: 22,
+    elevation: 20,
+    transform: [{ scale: 1.12 }],
+  },
+  playBtnText: { color: "#111", fontSize: 30 },
+
+  tvHint: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: -8,
+  },
+
+  skipIntroBtn: {
+    position: "absolute", bottom: 150, right: 44,
+    backgroundColor: "rgba(0,0,0,0.88)",
+    borderWidth: 3, borderColor: "#555",
+    paddingHorizontal: 28, paddingVertical: 14,
+    borderRadius: 10, zIndex: 50,
+  },
+  skipIntroBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.7,
+    shadowRadius: 12,
+    transform: [{ scale: 1.06 }],
+  },
+  skipIntroText: { color: "#fff", fontSize: 17, fontWeight: "900" },
 });
