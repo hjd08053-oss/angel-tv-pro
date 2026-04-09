@@ -59,14 +59,17 @@ export default function SeriesDetailScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* ── Top section ── */}
       <View style={styles.topSection}>
         {seriesCover && !coverErr ? (
           <Image source={{ uri: seriesCover }} style={styles.backdrop} resizeMode="cover" blurRadius={18} onError={() => setCoverErr(true)} />
         ) : null}
         <View style={styles.backdropOverlay} />
 
-        <Pressable onPress={() => router.back()} hasTVPreferredFocus style={({ focused }) => [styles.backBtn, (focused as boolean) && styles.backBtnFocused]}>
+        <Pressable
+          onPress={() => router.back()}
+          hasTVPreferredFocus
+          style={({ focused }) => [styles.backBtn, focused && styles.backBtnFocused]}
+        >
           <Text style={styles.backBtnText}>← رجوع</Text>
         </Pressable>
 
@@ -86,7 +89,11 @@ export default function SeriesDetailScreen() {
             ) : null}
             <Pressable
               onPress={toggleWatchlist}
-              style={({ focused }) => [styles.wlBtn, inWatchlist && styles.wlBtnActive, (focused as boolean) && styles.wlBtnFocused]}
+              style={({ focused }) => [
+                styles.wlBtn,
+                inWatchlist && styles.wlBtnActive,
+                focused && styles.wlBtnFocused,
+              ]}
             >
               {wlLoading ? (
                 <ActivityIndicator size="small" color={inWatchlist ? "#111" : colors.accent} />
@@ -100,7 +107,6 @@ export default function SeriesDetailScreen() {
         </View>
       </View>
 
-      {/* ── Seasons + Episodes ── */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.accent} />
@@ -108,16 +114,32 @@ export default function SeriesDetailScreen() {
         </View>
       ) : (
         <View style={styles.bottomSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.seasonsBar} contentContainerStyle={{ paddingHorizontal: 20, gap: 10, alignItems: "center" }}>
-            {seasons.map(s => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.seasonsBar}
+            contentContainerStyle={{ paddingHorizontal: 20, gap: 10, alignItems: "center" }}
+          >
+            {seasons.map((s, idx) => (
               <Pressable
                 key={s}
                 onPress={() => setSelectedSeason(s)}
-                style={({ focused }) => [styles.seasonBtn, activeSeason === s && styles.seasonBtnActive, (focused as boolean) && styles.seasonBtnFocused]}
+                hasTVPreferredFocus={idx === 0 && !loading}
+                style={({ focused }) => [
+                  styles.seasonBtn,
+                  activeSeason === s && styles.seasonBtnActive,
+                  focused && styles.seasonBtnFocused,
+                ]}
               >
-                <Text style={[styles.seasonBtnText, activeSeason === s && styles.seasonBtnTextActive]}>
-                  موسم {s}
-                </Text>
+                {({ focused }) => (
+                  <Text style={[
+                    styles.seasonBtnText,
+                    activeSeason === s && styles.seasonBtnTextActive,
+                    focused && styles.seasonBtnTextFocused,
+                  ]}>
+                    موسم {s}
+                  </Text>
+                )}
               </Pressable>
             ))}
           </ScrollView>
@@ -128,7 +150,11 @@ export default function SeriesDetailScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.epList}
             renderItem={({ item: ep, index }) => (
-              <EpisodeRow ep={ep} onPlay={() => playEpisode(ep)} hasTVPreferredFocus={index === 0 && activeSeason === seasons[0]} />
+              <EpisodeRow
+                ep={ep}
+                onPlay={() => playEpisode(ep)}
+                hasTVPreferredFocus={index === 0 && activeSeason === seasons[0] && seasons.length === 1}
+              />
             )}
           />
         </View>
@@ -145,9 +171,9 @@ function EpisodeRow({ ep, onPlay, hasTVPreferredFocus }: { ep: Episode; onPlay: 
     <Pressable
       onPress={onPlay}
       hasTVPreferredFocus={hasTVPreferredFocus}
-      style={({ focused }) => [styles.epRow, (focused as boolean) && styles.epRowFocused]}
+      style={({ focused }) => [styles.epRow, focused && styles.epRowFocused]}
     >
-      {({ focused }: { focused: boolean }) => (
+      {({ focused }) => (
         <>
           <View style={styles.epThumb}>
             {thumb && !imgErr ? (
@@ -170,6 +196,11 @@ function EpisodeRow({ ep, onPlay, hasTVPreferredFocus }: { ep: Episode; onPlay: 
             <Text style={styles.epSub} numberOfLines={1}>{ep.title ? `الحلقة ${ep.episode_num}` : ""}</Text>
             {ep.info?.duration ? <Text style={styles.epDuration}>{ep.info.duration}</Text> : null}
           </View>
+          {focused && (
+            <View style={styles.epPlayArrow}>
+              <Text style={styles.epPlayArrowText}>▶ شغّل</Text>
+            </View>
+          )}
         </>
       )}
     </Pressable>
@@ -183,11 +214,18 @@ const styles = StyleSheet.create({
   backdropOverlay: { ...StyleSheet.absoluteFillObject as any, backgroundColor: "rgba(17,17,8,0.75)" },
   backBtn: {
     position: "absolute", top: 14, left: 20, zIndex: 10,
-    backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 8, borderWidth: 2, borderColor: "transparent",
+    backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 18, paddingVertical: 10,
+    borderRadius: 8, borderWidth: 3, borderColor: "transparent",
   },
-  backBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.18)" },
-  backBtnText: { color: "#fff", fontSize: 15 },
+  backBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.22)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    transform: [{ scale: 1.06 }],
+  },
+  backBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   infoRow: { flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 24, paddingBottom: 16, paddingTop: 50, gap: 20, flex: 1 },
   posterWrap: { shadowColor: "#000", shadowOpacity: 0.8, shadowRadius: 12, elevation: 12 },
   poster: { width: 110, height: 155, borderRadius: 10, backgroundColor: "#1a1a0d" },
@@ -197,40 +235,68 @@ const styles = StyleSheet.create({
   seriesMeta: { color: colors.accent, fontSize: 13, fontWeight: "600", textAlign: "right" },
   plot: { color: "#aaa", fontSize: 12, textAlign: "right", lineHeight: 18 },
   wlBtn: {
-    alignSelf: "flex-end", paddingHorizontal: 16, paddingVertical: 7,
-    borderRadius: 8, borderWidth: 2, borderColor: colors.border, backgroundColor: "rgba(240,191,26,0.08)",
-    marginTop: 4,
+    alignSelf: "flex-end", paddingHorizontal: 18, paddingVertical: 9,
+    borderRadius: 8, borderWidth: 3, borderColor: colors.border,
+    backgroundColor: "rgba(240,191,26,0.08)", marginTop: 4,
   },
   wlBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  wlBtnFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.14)" },
+  wlBtnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.14)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    transform: [{ scale: 1.05 }],
+  },
   wlBtnText: { color: colors.accent, fontSize: 13, fontWeight: "700" },
   wlBtnTextActive: { color: "#111" },
 
   bottomSection: { flex: 1 },
-  seasonsBar: { maxHeight: 54, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
-  seasonBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, backgroundColor: "#1e1e10", borderWidth: 2, borderColor: "transparent" },
+  seasonsBar: { maxHeight: 60, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
+  seasonBtn: {
+    paddingHorizontal: 22, paddingVertical: 10, borderRadius: 20,
+    backgroundColor: "#1e1e10", borderWidth: 3, borderColor: "transparent",
+  },
   seasonBtnActive: { backgroundColor: colors.accent },
-  seasonBtnFocused: { borderColor: "#ffffff" },
+  seasonBtnFocused: {
+    borderColor: "#ffffff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    transform: [{ scale: 1.08 }],
+  },
   seasonBtnText: { color: "#aaa", fontSize: 14, fontWeight: "700" },
   seasonBtnTextActive: { color: "#111" },
+  seasonBtnTextFocused: { color: "#fff" },
 
   epList: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 32 },
   epRow: {
     flexDirection: "row", alignItems: "center", gap: 16,
-    paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10,
-    marginBottom: 6, backgroundColor: colors.card, borderWidth: 2, borderColor: "transparent",
+    paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12,
+    marginBottom: 6, backgroundColor: colors.card, borderWidth: 3, borderColor: "transparent",
   },
-  epRowFocused: { borderColor: "#ffffff", backgroundColor: "rgba(255,255,255,0.08)" },
+  epRowFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#fff",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    transform: [{ scale: 1.02 }],
+  },
   epThumb: { width: 160, height: 90, borderRadius: 8, backgroundColor: "#1a1a0d", overflow: "hidden" },
   epThumbPlaceholder: { backgroundColor: "#1e1e10", alignItems: "center", justifyContent: "center" },
   epNumText: { color: "#555", fontSize: 18, fontWeight: "900" },
   epPlayOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
-  epPlayIcon: { color: "#fff", fontSize: 28 },
+  epPlayIcon: { color: "#fff", fontSize: 32 },
   epInfo: { flex: 1, gap: 3 },
   epTitle: { color: "#fff", fontSize: 15, fontWeight: "700", textAlign: "right" },
-  epTitleFocused: { color: "#ffffff" },
+  epTitleFocused: { color: "#ffffff", fontSize: 16 },
   epSub: { color: "#888", fontSize: 12, textAlign: "right" },
   epDuration: { color: "#666", fontSize: 11, textAlign: "right" },
+  epPlayArrow: {
+    backgroundColor: colors.accent, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+  },
+  epPlayArrowText: { color: "#111", fontSize: 14, fontWeight: "900" },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   loadingText: { color: "#aaa", fontSize: 16 },
 });
