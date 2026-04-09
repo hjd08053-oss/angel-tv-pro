@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet, Animated,
-  ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Platform,
 } from "react-native";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,6 +20,7 @@ export default function SubscriptionScreen() {
   const [stage, setStage] = useState<Stage>("enter");
   const [errMsg, setErrMsg] = useState("");
   const [subInfo, setSubInfo] = useState<{ label: string; expires_at: string | null; is_lifetime: boolean } | null>(null);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -118,7 +119,7 @@ export default function SubscriptionScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <View style={styles.root}>
       {stage === "welcome" && (
         <View style={styles.welcomeOverlay}>
           <Animated.View style={[styles.welcomeCard, { transform: [{ scale: scaleAnim }] }]}>
@@ -149,15 +150,35 @@ export default function SubscriptionScreen() {
             <View style={styles.modeTabs}>
               <Pressable
                 onPress={() => { setMode("code"); setStage("enter"); }}
-                style={({ focused }) => [styles.modeTab, mode === "code" && styles.modeTabActive, (focused as boolean) && styles.modeTabFocused]}
+                style={({ focused }) => [
+                  styles.modeTab,
+                  mode === "code" && styles.modeTabActive,
+                  focused && styles.modeTabFocused,
+                ]}
               >
-                <Text style={[styles.modeTabText, mode === "code" && styles.modeTabTextActive]}>بالكود</Text>
+                {({ focused }) => (
+                  <Text style={[
+                    styles.modeTabText,
+                    mode === "code" && styles.modeTabTextActive,
+                    focused && styles.modeTabTextFocused,
+                  ]}>بالكود</Text>
+                )}
               </Pressable>
               <Pressable
                 onPress={() => { setMode("account"); setStage("enter"); }}
-                style={({ focused }) => [styles.modeTab, mode === "account" && styles.modeTabActive, (focused as boolean) && styles.modeTabFocused]}
+                style={({ focused }) => [
+                  styles.modeTab,
+                  mode === "account" && styles.modeTabActive,
+                  focused && styles.modeTabFocused,
+                ]}
               >
-                <Text style={[styles.modeTabText, mode === "account" && styles.modeTabTextActive]}>بالحساب</Text>
+                {({ focused }) => (
+                  <Text style={[
+                    styles.modeTabText,
+                    mode === "account" && styles.modeTabTextActive,
+                    focused && styles.modeTabTextFocused,
+                  ]}>بالحساب</Text>
+                )}
               </Pressable>
             </View>
 
@@ -165,42 +186,66 @@ export default function SubscriptionScreen() {
               <>
                 <Text style={styles.cardTitle}>أدخل كود الاشتراك</Text>
                 <Text style={styles.cardSub}>للحصول على كود تواصل مع مالك السيرفر</Text>
-                <TextInput
-                  value={code}
-                  onChangeText={t => { setCode(t); if (stage === "error") setStage("enter"); }}
-                  placeholder="ANGEL-XXXX-XXXX"
-                  placeholderTextColor="#555"
-                  autoCapitalize="characters"
-                  style={[styles.input, stage === "error" && styles.inputError]}
-                  editable={stage !== "loading"}
-                />
+                <View style={[
+                  styles.inputWrap,
+                  stage === "error" && styles.inputWrapError,
+                  focusedInput === "code" && styles.inputWrapFocused,
+                ]}>
+                  <TextInput
+                    value={code}
+                    onChangeText={t => { setCode(t); if (stage === "error") setStage("enter"); }}
+                    placeholder="ANGEL-XXXX-XXXX"
+                    placeholderTextColor="#555"
+                    autoCapitalize="characters"
+                    style={styles.input}
+                    editable={stage !== "loading"}
+                    onFocus={() => setFocusedInput("code")}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
               </>
             ) : (
               <>
                 <Text style={styles.cardTitle}>تسجيل الدخول بحساب</Text>
                 <Text style={styles.cardSub}>أدخل اسم المستخدم وكلمة المرور</Text>
-                <TextInput
-                  value={username}
-                  onChangeText={t => { setUsername(t); if (stage === "error") setStage("enter"); }}
-                  placeholder="اسم المستخدم"
-                  placeholderTextColor="#555"
-                  autoCapitalize="none"
-                  style={[styles.input, stage === "error" && styles.inputError]}
-                  editable={stage !== "loading"}
-                />
-                <TextInput
-                  value={password}
-                  onChangeText={t => { setPassword(t); if (stage === "error") setStage("enter"); }}
-                  placeholder="كلمة المرور"
-                  placeholderTextColor="#555"
-                  secureTextEntry
-                  style={[styles.input, stage === "error" && styles.inputError]}
-                  editable={stage !== "loading"}
-                />
+                <View style={[
+                  styles.inputWrap,
+                  stage === "error" && styles.inputWrapError,
+                  focusedInput === "username" && styles.inputWrapFocused,
+                ]}>
+                  <TextInput
+                    value={username}
+                    onChangeText={t => { setUsername(t); if (stage === "error") setStage("enter"); }}
+                    placeholder="اسم المستخدم"
+                    placeholderTextColor="#555"
+                    autoCapitalize="none"
+                    style={styles.input}
+                    editable={stage !== "loading"}
+                    onFocus={() => setFocusedInput("username")}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
+                <View style={[
+                  styles.inputWrap,
+                  stage === "error" && styles.inputWrapError,
+                  focusedInput === "password" && styles.inputWrapFocused,
+                ]}>
+                  <TextInput
+                    value={password}
+                    onChangeText={t => { setPassword(t); if (stage === "error") setStage("enter"); }}
+                    placeholder="كلمة المرور"
+                    placeholderTextColor="#555"
+                    secureTextEntry
+                    style={styles.input}
+                    editable={stage !== "loading"}
+                    onFocus={() => setFocusedInput("password")}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
               </>
             )}
 
-            {stage === "error" && <Text style={styles.errorMsg}>{errMsg}</Text>}
+            {stage === "error" && <Text style={styles.errorMsg}>⚠ {errMsg}</Text>}
 
             {stage === "loading" ? (
               <View style={styles.loadingRow}>
@@ -210,16 +255,20 @@ export default function SubscriptionScreen() {
             ) : (
               <Pressable
                 onPress={submit}
-                style={({ focused }) => [styles.btn, (focused as boolean) && styles.btnFocused]}
                 hasTVPreferredFocus
+                style={({ focused }) => [styles.btn, focused && styles.btnFocused]}
               >
-                <Text style={styles.btnText}>{mode === "code" ? "تحقق من الكود" : "دخول"}</Text>
+                {({ focused }) => (
+                  <Text style={[styles.btnText, focused && styles.btnTextFocused]}>
+                    {mode === "code" ? "✓ تحقق من الكود" : "→ دخول"}
+                  </Text>
+                )}
               </Pressable>
             )}
           </View>
         </View>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -227,53 +276,82 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   container: { flex: 1, alignItems: "center", justifyContent: "center", gap: 20, paddingHorizontal: 40 },
   logoWrap: { flexDirection: "row", alignItems: "flex-end" },
-  logoText: { fontSize: 48, fontWeight: "900", color: "#fff", letterSpacing: 2 },
-  logoPro: { fontSize: 22, fontWeight: "700", color: colors.accent, marginBottom: 6 },
+  logoText: { fontSize: 52, fontWeight: "900", color: "#fff", letterSpacing: 2 },
+  logoPro: { fontSize: 24, fontWeight: "700", color: colors.accent, marginBottom: 8 },
   appSubtitle: { color: "#666", fontSize: 16, marginTop: -12 },
 
   card: {
-    backgroundColor: colors.card, borderRadius: 16, padding: 36,
-    alignItems: "center", gap: 14, width: "100%", maxWidth: 460,
+    backgroundColor: colors.card, borderRadius: 20, padding: 40,
+    alignItems: "center", gap: 16, width: "100%", maxWidth: 500,
     borderWidth: 1, borderColor: colors.border,
   },
-  modeTabs: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  modeTabs: { flexDirection: "row", gap: 10, marginBottom: 4 },
   modeTab: {
-    paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8,
-    borderWidth: 2, borderColor: "transparent", backgroundColor: "#111108",
+    paddingHorizontal: 28, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 3, borderColor: "transparent", backgroundColor: "#111108",
   },
   modeTabActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  modeTabFocused: { borderColor: colors.accent },
-  modeTabText: { color: "#888", fontSize: 15, fontWeight: "700" },
+  modeTabFocused: {
+    borderColor: "#ffffff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    transform: [{ scale: 1.06 }],
+  },
+  modeTabText: { color: "#888", fontSize: 16, fontWeight: "700" },
   modeTabTextActive: { color: "#111" },
+  modeTabTextFocused: { color: "#fff" },
 
   cardTitle: { color: "#fff", fontSize: 22, fontWeight: "800" },
   cardSub: { color: "#888", fontSize: 13, textAlign: "center", lineHeight: 20 },
 
-  input: {
-    width: "100%", backgroundColor: "#0d0d06", color: "#fff",
-    fontSize: 16, fontWeight: "700", textAlign: "center",
-    paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: colors.border, letterSpacing: 1,
+  inputWrap: {
+    width: "100%",
+    borderRadius: 12, borderWidth: 3, borderColor: colors.border,
+    backgroundColor: "#0d0d06",
+    overflow: "hidden",
   },
-  inputError: { borderColor: "#ef4444" },
-  errorMsg: { color: "#ef4444", fontSize: 14, fontWeight: "600" },
+  inputWrapFocused: {
+    borderColor: "#ffffff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+  },
+  inputWrapError: { borderColor: "#ef4444" },
+  input: {
+    width: "100%", color: "#fff",
+    fontSize: 17, fontWeight: "700", textAlign: "center",
+    paddingVertical: 16, paddingHorizontal: 20,
+    letterSpacing: 1,
+  },
+
+  errorMsg: { color: "#ef4444", fontSize: 14, fontWeight: "600", backgroundColor: "rgba(239,68,68,0.1)", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
   loadingRow: { flexDirection: "row", gap: 10, alignItems: "center" },
   loadingText: { color: "#aaa", fontSize: 15 },
 
   btn: {
-    backgroundColor: colors.accent, paddingVertical: 16, paddingHorizontal: 50,
-    borderRadius: 10, borderWidth: 2, borderColor: "transparent", marginTop: 4, width: "100%",
+    backgroundColor: colors.accent, paddingVertical: 18, paddingHorizontal: 60,
+    borderRadius: 12, borderWidth: 3, borderColor: "transparent", marginTop: 4, width: "100%",
   },
-  btnFocused: { borderColor: "#fff", shadowColor: colors.accentGlow, shadowOpacity: 1, shadowRadius: 14 },
-  btnText: { color: "#111", fontSize: 18, fontWeight: "900", textAlign: "center" },
+  btnFocused: {
+    borderColor: "#ffffff",
+    backgroundColor: "#fff",
+    shadowColor: "#fff",
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 16,
+    transform: [{ scale: 1.05 }],
+  },
+  btnText: { color: "#111", fontSize: 19, fontWeight: "900", textAlign: "center" },
+  btnTextFocused: { color: "#111" },
 
   welcomeOverlay: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" },
   welcomeCard: {
-    backgroundColor: colors.card, borderRadius: 20, padding: 48,
-    alignItems: "center", gap: 20, borderWidth: 2, borderColor: colors.accent, minWidth: 320,
+    backgroundColor: colors.card, borderRadius: 24, padding: 52,
+    alignItems: "center", gap: 20, borderWidth: 2, borderColor: colors.accent, minWidth: 340,
   },
-  checkMark: { fontSize: 64, color: colors.accent },
-  welcomeTitle: { color: "#fff", fontSize: 28, fontWeight: "900" },
-  welcomeSub: { color: "#aaa", fontSize: 16 },
-  welcomeDuration: { color: colors.accent, fontSize: 15, fontWeight: "700", marginTop: 4 },
+  checkMark: { fontSize: 72, color: colors.accent },
+  welcomeTitle: { color: "#fff", fontSize: 30, fontWeight: "900" },
+  welcomeSub: { color: "#aaa", fontSize: 17 },
+  welcomeDuration: { color: colors.accent, fontSize: 16, fontWeight: "700", marginTop: 4 },
 });
